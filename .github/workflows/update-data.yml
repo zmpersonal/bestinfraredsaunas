@@ -1,0 +1,42 @@
+name: Update infrared sauna data and deploy
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 9 * * 1'
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: infrared-data
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Refresh pure infrared catalog
+        run: python scripts/update_infrared.py
+      - name: Commit refreshed data/pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data models emf best sitemap.xml
+          if ! git diff --cached --quiet; then
+            git commit -m "Update infrared sauna data"
+            git push
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+      - name: Deploy refreshed site
+        id: deployment
+        uses: actions/deploy-pages@v4
