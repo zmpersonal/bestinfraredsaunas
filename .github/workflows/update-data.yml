@@ -28,7 +28,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data models emf best sitemap.xml
+          git add data models retailers emf best electrical methodology index.html 404.html assets/app.js assets/style.css sitemap.xml
           if ! git diff --cached --quiet; then
             git commit -m "Update infrared sauna data"
             git push
