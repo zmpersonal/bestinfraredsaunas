@@ -1,31 +1,60 @@
-# BestHomeInfraredSauna.com
+# BestHomeInfraredSauna.com — v2 retailer-link architecture
 
-An infrared-only home sauna specification lab built for GitHub Pages.
+Static GitHub Pages site for comparing **infrared-only home saunas** by physical fit, electrical fit, spectrum and source-reported EMF claims.
 
-## What it does
+## What changed in v2
 
-- Home-fit finder based on room dimensions, electrical service, capacity and budget.
-- Infrared-only product index. Traditional, steam, barrel and hybrid saunas are excluded.
-- Source-linked EMF claims index.
-- 120V/15A and 120V/20A electrical compatibility checker.
-- Generated model pages and fit lists.
-- Downloadable JSON + CSV data.
-- Weekly catalog refresh from the InHouse Wellness infrared sauna collection.
+- Individual model pages no longer link directly to ecommerce sites.
+- Every model's **Where to Buy This Sauna** button stays internal and points to a retailer context page.
+- `/retailers/inhouse-wellness/` contains the site's **single outbound link to InHouse Wellness**.
+- Other retailer pages also contain a single outbound link per retailer.
+- Model pages now show the actual product photo when the source feed/page exposes one, next to the dimension drawing.
+- Additional infrared-only models from curated retailers are included below the featured InHouse catalog.
+- Brands from additional retailers are deliberately sorted after all InHouse-sourced brands in the homepage dropdown.
 
-## GitHub Pages setup
+## Current external comparison set
 
-1. Upload the contents of this folder to the repository root, including `.github`.
-2. Repository **Settings → Pages → Build and deployment → Source → GitHub Actions**.
-3. Set the custom domain to `besthomeinfraredsauna.com`.
-4. Point DNS to GitHub Pages.
-5. Run **Actions → Update infrared sauna data and deploy → Run workflow** once.
+Configured in `data/external_models.json` and refreshable by the weekly updater:
+
+- Clearlight — Sanctuary 2, Premier 2
+- Health Mate — Enrich 2, Enrich 3
+- HigherDOSE — Full Spectrum Infrared Sauna, 2-person variant
+- Sunlighten — mPulse Believe
+
+Edit `data/external_models.json` to add/remove external models or retailers. A retailer receives one internal context page and one outbound link.
+
+## Product photos
+
+The updater tries, in order:
+
+1. Shopify product image data (InHouse feed)
+2. OpenGraph image metadata from the product page
+3. Product JSON-LD image metadata
+4. Previously saved image URL
+
+If no image is available, the model page shows a temporary photo placeholder. Run the Action after uploading so current product images are populated.
+
+## Automatic update
+
+Workflow: `.github/workflows/update-data.yml`
+
+- manual via **Actions → Update infrared sauna data and deploy → Run workflow**
+- scheduled Mondays at 09:23 UTC
+- refreshes InHouse infrared products
+- refreshes configured external product pages
+- excludes traditional / hybrid / steam products from the InHouse feed
+- rebuilds model, retailer, EMF, electrical and fit-list pages
+- deploys the refreshed site in the same workflow
 
 No API key is required.
 
-## Infrared-only rule
+## GitHub Pages setup
 
-The updater starts from `https://inhousewellness.com/collections/infrared-saunas`, then applies an additional exclusion test to product title, type and tags. Products identified as **traditional**, **hybrid**, or **steam sauna** are rejected. The descriptive body is not used for negative filtering because a pure infrared model may legitimately compare itself with a traditional sauna in marketing copy.
+1. Upload all repository contents, including `.github`.
+2. Settings → Pages → Source → **GitHub Actions**.
+3. Set custom domain to `besthomeinfraredsauna.com`.
+4. Run the update workflow once after upload.
 
-## Data caution
+## Outbound-link check
 
-EMF labels are reported as product/manufacturer terminology. They are not treated as standardized certifications. Numerical EMF values and measurement distance are stored only when the source states them.
+After a successful build, the generated HTML should contain exactly one `inhousewellness.com` anchor: the link on `/retailers/inhouse-wellness/` to the infrared sauna collection.
