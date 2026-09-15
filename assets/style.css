@@ -16,3 +16,24 @@
 .metric-row strong{color:#b9c8ff}
 .breaker span{color:#b9c8ff}
 .breaker button:hover,.breaker button.active{background:#dbe4ff;color:var(--ink)}
+
+/* Brand mark and retailer directory */
+.wordmark{display:flex;align-items:center;gap:10px;letter-spacing:0;font-size:inherit}
+.wordmark img{width:40px;height:40px;display:block}
+.wordmark .wordmark-copy{display:flex;flex-direction:column;background:none;color:var(--ink);margin:0;padding:0;letter-spacing:0;vertical-align:0}
+.wordmark .wordmark-copy strong{font-size:15px;line-height:1;text-transform:uppercase;letter-spacing:.03em}
+.wordmark .wordmark-copy small{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;line-height:1.25;letter-spacing:.11em;text-transform:uppercase;color:var(--blue);margin-top:4px}
+.retailer-policy{display:grid;grid-template-columns:220px 1fr;gap:30px;align-items:start;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);padding:24px 0;margin:42px 0}
+.retailer-policy strong{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.retailer-policy p{margin:0;max-width:760px;color:var(--muted)}
+.retailer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px}
+.retailer-card{border:1px solid var(--ink);background:var(--paper2);padding:24px;min-height:270px;display:flex;flex-direction:column}
+.retailer-card.featured{background:var(--lime);box-shadow:7px 7px 0 var(--ink)}
+.retailer-card-top{display:flex;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.retailer-card-top span{color:var(--blue);font-weight:900}
+.retailer-card h2{font-size:30px;line-height:1;letter-spacing:-.045em;margin:28px 0 14px}
+.retailer-card p{font-size:14px;color:#515966;margin:0 0 24px}
+.retailer-card .text-link{margin-top:auto}
+.retailer-empty{border:1px dashed var(--line);padding:24px;color:var(--muted);max-width:850px}
+@media(max-width:900px){.retailer-grid{grid-template-columns:1fr 1fr}.retailer-policy{grid-template-columns:1fr}}
+@media(max-width:600px){.wordmark .wordmark-copy{display:none}.retailer-grid{grid-template-columns:1fr}}

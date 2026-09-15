@@ -23,6 +23,30 @@
       "name": "Sunlighten",
       "outbound_url": "https://www.sunlighten.com/saunas/",
       "description": "Sunlighten's direct site is the purchase/source destination for the Sunlighten models indexed here."
+    },
+    {
+      "slug": "jnh-lifestyles",
+      "name": "JNH Lifestyles",
+      "outbound_url": "https://jnhlifestyles.com/",
+      "description": "JNH Lifestyles sells its own indoor far-infrared and full-spectrum sauna cabins directly, including compact models designed around standard residential circuits."
+    },
+    {
+      "slug": "saunaspace",
+      "name": "SaunaSpace",
+      "outbound_url": "https://sauna.space/",
+      "description": "SaunaSpace specializes in portable fabric-enclosure infrared saunas and incandescent red and near-infrared light systems rather than conventional wood cabins."
+    },
+    {
+      "slug": "sun-home-saunas",
+      "name": "Sun Home Saunas",
+      "outbound_url": "https://sunhomesaunas.com/",
+      "description": "Sun Home Saunas sells indoor and outdoor infrared models, including far-infrared, full-spectrum and integrated red-light configurations."
+    },
+    {
+      "slug": "radiant-health-saunas",
+      "name": "Radiant Health Saunas",
+      "outbound_url": "https://radianthealthsaunas.com/",
+      "description": "Radiant Health Saunas sells its Pause line of indoor far-infrared cabins with published third-party EMF, electric-field and VOC testing."
     }
   ],
   "models": [
@@ -142,6 +166,70 @@
       "emf_label": "Ultra Low EMF",
       "wood": "Eucalyptus",
       "red_light": true
+    },
+    {
+      "brand": "JNH Lifestyles",
+      "model": "Joyous+ 2 Person",
+      "slug": "jnh-joyous-plus-2-person",
+      "source_url": "https://jnhlifestyles.com/joyous-plus-2-person-far-infrared-sauna-low-emf/",
+      "retailer_slug": "jnh-lifestyles",
+      "capacity": 2,
+      "width": 47.3,
+      "depth": 39.5,
+      "height": 75,
+      "voltage": 120,
+      "amps": 15,
+      "watts": 1700,
+      "circuits": 1,
+      "spectrum": "FAR Infrared",
+      "emf_label": "Low EMF",
+      "emf_claim": "Less than 8 mG",
+      "wood": "Canadian Hemlock",
+      "max_temp": 170,
+      "red_light": false,
+      "price": 2499
+    },
+    {
+      "brand": "SaunaSpace",
+      "model": "FireLight Full-Spectrum Sauna",
+      "slug": "saunaspace-firelight-full-spectrum",
+      "source_url": "https://sauna.space/products/firelight-infrared-sauna",
+      "retailer_slug": "saunaspace",
+      "capacity": 1,
+      "width": 52,
+      "depth": 52,
+      "height": 63,
+      "voltage": 120,
+      "circuits": 1,
+      "spectrum": "Full Spectrum",
+      "emf_label": "Not stated",
+      "red_light": true
+    },
+    {
+      "brand": "Sun Home Saunas",
+      "model": "Solstice 1-Person",
+      "slug": "sun-home-solstice-1-person",
+      "source_url": "https://sunhomesaunas.com/",
+      "retailer_slug": "sun-home-saunas",
+      "capacity": 1,
+      "spectrum": "FAR Infrared",
+      "emf_label": "Low EMF",
+      "red_light": false,
+      "parse_live_specs": false
+    },
+    {
+      "brand": "Radiant Health Saunas",
+      "model": "Pause 2-Person",
+      "slug": "radiant-health-pause-2-person",
+      "source_url": "https://radianthealthsaunas.com/",
+      "retailer_slug": "radiant-health-saunas",
+      "capacity": 2,
+      "spectrum": "FAR Infrared",
+      "emf_label": "Ultra Low EMF",
+      "emf_claim": "0.65 mG average",
+      "red_light": false,
+      "price": 6940,
+      "parse_live_specs": false
     }
   ]
 }

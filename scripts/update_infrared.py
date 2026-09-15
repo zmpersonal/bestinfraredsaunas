@@ -19,6 +19,25 @@ RETAILERS={
  }
 }
 
+def load_retailers():
+    """Load curated retailer metadata even when rendering from saved catalog data."""
+    cfg_path=ROOT/'data/external_models.json'
+    if not cfg_path.exists(): return
+    cfg=json.loads(cfg_path.read_text())
+    for r in cfg.get('retailers',[]): RETAILERS[r['slug']]=r
+
+def apply_retailer_priority(data):
+    """Keep InHouse as the recommendation for every brand in its live catalog."""
+    inhouse_brands={clean(x.get('brand','')).casefold() for x in data if x.get('retailer_slug')=='inhouse-wellness'}
+    unique={}
+    for item in data:
+        if clean(item.get('brand','')).casefold() in inhouse_brands:
+            item['retailer_slug']='inhouse-wellness'
+            item['source_group']='featured'
+            item['source_priority']=0
+        unique.setdefault(item.get('slug'),item)
+    return list(unique.values())
+
 def get_json(url):
     r=requests.get(url,headers=UA,timeout=35); r.raise_for_status(); return r.json()
 def get_text(url):
@@ -196,10 +215,10 @@ def scrape_external(old):
           'source':RETAILERS.get(spec['retailer_slug'],{}).get('name',spec['retailer_slug']),'retailer_slug':spec['retailer_slug'],
           'source_group':'additional','source_priority':10,'pure_infrared':True,'traditional':False,'hybrid':False,'image':image or prior.get('image','')
         }
-        if text: rec.update(parse_specs(text,rec['title']))
+        if text and spec.get('parse_live_specs',True): rec.update(parse_specs(text,rec['title']))
         # Curated overrides/fallbacks take precedence for variant-specific values.
         for k,v in spec.items():
-            if k not in ('source_url','retailer_slug','slug') and v not in (None,''): rec[k]=v
+            if k not in ('source_url','retailer_slug','slug','parse_live_specs') and v not in (None,''): rec[k]=v
         if live_price is not None and spec.get('price') is None: rec['price']=live_price
         for k,v in prior.items():
             if rec.get(k) in (None,'','Not stated') and v not in (None,''): rec[k]=v
@@ -216,7 +235,7 @@ def scrape():
         featured=[x for x in old_list if x.get('source_group','featured')=='featured']
         for x in featured:
             x.update(retailer_slug='inhouse-wellness',source_group='featured',source_priority=0)
-    data=featured+additional
+    data=apply_retailer_priority(featured+additional)
     return sorted(data,key=lambda x:(x.get('source_priority',10),x.get('brand','').lower(),x.get('price') or 10**9,x.get('model','').lower()))
 
 def write_data(data):
@@ -228,9 +247,9 @@ def write_data(data):
     with (ROOT/'data/infrared_saunas.csv').open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(data)
 
-NAV='''<nav class="nav"><a class="wordmark" href="/">BHIS<span>LAB</span></a><div class="navlinks"><a href="/#finder">Finder</a><a href="/emf/">EMF Index</a><a href="/electrical/">Electrical Fit</a><a href="/best/120v/">Best by Fit</a><a href="/retailers/inhouse-wellness/">Retailers</a><a href="/methodology/">Methodology</a></div></nav>'''
-FOOT='''<footer><div><strong>Best Home Infrared Sauna / Spec Lab</strong><p>Infrared-only residential sauna specifications, fit checks and source-linked claims.</p></div><div><a href="/data/infrared_saunas.csv">Download CSV</a><a href="/retailers/inhouse-wellness/">Retailer directory</a></div></footer>'''
-def head(title,desc,path): return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><link rel="canonical" href="{DOMAIN}{path}"><link rel="stylesheet" href="/assets/style.css"></head><body>'''
+NAV='''<nav class="nav"><a class="wordmark" href="/" aria-label="Best Home Infrared Sauna home"><img src="/assets/logo-mark.svg" alt=""><span class="wordmark-copy"><strong>Best Home</strong><small>Infrared Sauna</small></span></a><div class="navlinks"><a href="/#finder">Finder</a><a href="/emf/">EMF Index</a><a href="/electrical/">Electrical Fit</a><a href="/best/120v/">Best by Fit</a><a href="/retailers/">Retailers</a><a href="/methodology/">Methodology</a></div></nav>'''
+FOOT='''<footer><div><strong>Best Home Infrared Sauna / Spec Lab</strong><p>Infrared-only residential sauna specifications, fit checks and source-linked claims.</p></div><div><a href="/data/infrared_saunas.csv">Download CSV</a><a href="/retailers/">Retailer directory</a></div></footer>'''
+def head(title,desc,path): return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><meta name="description" content="{html.escape(desc)}"><link rel="canonical" href="{DOMAIN}{path}"><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"><meta name="theme-color" content="#111a28"><link rel="stylesheet" href="/assets/style.css"></head><body>'''
 
 def render_home(data):
     featured=[x for x in data if x.get('source_group')=='featured']; additional=[x for x in data if x.get('source_group')=='additional']
@@ -241,18 +260,21 @@ def render_home(data):
 <section class="signal-bar"><div><b id="countModels">{len(data)}</b><span>infrared models indexed</span></div><div><b id="count120">{sum(1 for s in data if s.get('voltage')==120 and (s.get('circuits') or 1)==1)}</b><span>single-circuit 120V models</span></div><div><b id="medianPrice">{money(med)}</b><span>median observed price</span></div><div><b id="countFull">{sum(1 for s in data if s.get('spectrum')=='Full Spectrum')}</b><span>full-spectrum models</span></div></section>
 <section id="finder" class="lab-section"><div class="section-intro"><span>01 / HOME FIT</span><div><h2>Will it fit your room and circuit?</h2></div><p>Set your room envelope, circuit, capacity and budget. The finder ranks documented matches and keeps unknown specs visible rather than guessing.</p></div><div class="finder-grid"><form id="fitForm" class="panel form-panel"><label>Max width <small>inches</small><input id="maxWidth" type="number" value="60" min="30"></label><label>Max depth <small>inches</small><input id="maxDepth" type="number" value="50" min="30"></label><label>Max height <small>inches</small><input id="maxHeight" type="number" value="82" min="65"></label><label>Minimum capacity<select id="minCapacity"><option value="1">1 person</option><option value="2" selected>2 people</option><option value="3">3 people</option><option value="4">4+ people</option></select></label><label>Available circuit<select id="circuit"><option value="any">Any / researching</option><option value="120-15">120V / 15A</option><option value="120-20">120V / 20A</option></select></label><label>Budget<input id="budget" type="number" value="7000" step="500"></label><label>Spectrum<select id="spectrum"><option value="any">Any</option><option>FAR Infrared</option><option>Full Spectrum</option></select></label><label>EMF wording<select id="emf"><option value="any">Any</option><option>Low EMF</option><option>Ultra Low EMF</option><option>Near Zero EMF</option></select></label><label class="check"><input id="redLight" type="checkbox"> Prefer documented red light</label><button class="button" type="submit">Find documented matches</button></form><div id="fitResults" class="results-panel"><div class="blank-state"><span>FIT / ?</span><h3>Enter your room.</h3><p>Results appear here.</p></div></div></div></section>
 <section id="models" class="lab-section dark"><div class="section-intro"><span>02 / MODEL INDEX</span><div><h2>Infrared home sauna database</h2></div><p>Models carried by the featured retailer are shown first. Additional brands from other retailers are intentionally placed below that catalog.</p></div><div class="filters"><input id="search" type="search" placeholder="Search model, SKU or brand"><select id="brandFilter"><option value="">All brands</option></select><select id="capFilter"><option value="">Any capacity</option><option value="1">1 person</option><option value="2">2 people</option><option value="3">3 people</option><option value="4">4+ people</option></select></div><div id="modelGrid" class="model-grid"></div></section>
-<section class="lab-section callout"><div><span>RETAILER CONTEXT</span><h2>Where to buy the models in this index</h2><p>Outbound shopping links are centralized on retailer pages rather than repeated across hundreds of model and comparison pages.</p></div><a class="button" href="/retailers/inhouse-wellness/">View recommended retailer</a></section>
+<section class="lab-section callout"><div><span>RETAILER DIRECTORY</span><h2>Where to buy the models in this index</h2><p>Compare every retailer used by the index. InHouse Wellness remains the recommendation whenever it carries the brand.</p></div><a class="button" href="/retailers/">Compare retailers</a></section>
 </main><script src="/assets/app.js"></script>'''+FOOT+'</body></html>'
     (ROOT/'index.html').write_text(page)
 
 def render_retailers(data):
+    load_retailers()
     rroot=ROOT/'retailers'; rroot.mkdir(exist_ok=True)
     for d in rroot.iterdir():
         if d.is_dir(): shutil.rmtree(d)
-    grouped={}
+    grouped={slug:[] for slug in RETAILERS}
     for s in data: grouped.setdefault(s.get('retailer_slug','inhouse-wellness'),[]).append(s)
+    directory_cards=[]
     for slug,items in grouped.items():
-        r=RETAILERS.get(slug,{'slug':slug,'name':items[0].get('source',slug),'outbound_url':'','description':''})
+        fallback_name=items[0].get('source',slug) if items else slug
+        r=RETAILERS.get(slug,{'slug':slug,'name':fallback_name,'outbound_url':'','description':''})
         is_featured=(slug=='inhouse-wellness')
         label='RECOMMENDED RETAILER' if is_featured else 'ADDITIONAL RETAILER'
         model_list=''.join(f'''<article class="rank-row"><span>{i:02}</span><div><h2><a href="/models/{s['slug']}/">{html.escape(str(s.get('brand')))} {html.escape(str(s.get('model')))}</a></h2><p>{val(s.get('width'),'″')} × {val(s.get('depth'),'″')} × {val(s.get('height'),'″')} · {val(s.get('voltage'),'V')}/{val(s.get('amps'),'A')} · {html.escape(str(s.get('spectrum') or 'Infrared'))}</p></div><strong>{money(s.get('price'))}</strong></article>''' for i,s in enumerate(items,1))
@@ -265,8 +287,12 @@ def render_retailers(data):
           f'<div class="retailer-context"><h2>How this retailer is used in the index</h2><p>{html.escape(r.get("description", ""))}</p><p>These models are intentionally listed after the featured-retailer catalog on the homepage and brand selector.</p></div>'
         )
         outbound=f'<a class="button retailer-outbound" href="{html.escape(r.get("outbound_url",""))}">{"Browse infrared saunas at InHouse Wellness" if is_featured else "Visit "+html.escape(r.get("name",slug))}</a>'
-        page=head(f'{r.get("name")} — Infrared Sauna Retailer Guide',f'Retailer context and indexed infrared sauna models for {r.get("name")}.',f'/retailers/{slug}/')+NAV+f'''<main class="subpage"><div class="page-kicker">{label}</div><h1>{html.escape(r.get('name',slug))}</h1>{intro}{details}<div class="retailer-linkbox"><span>ONE OUTBOUND SHOPPING LINK</span><p>Current availability and purchase information are maintained by the retailer.</p>{outbound}</div><h2 class="retailer-model-heading">Models indexed from this retailer</h2><div class="rank-list">{model_list}</div></main>'''+FOOT+'</body></html>'
+        empty_state='' if model_list else '<div class="retailer-empty"><p>No individual models from this retailer are currently in the comparison dataset. The retailer remains listed so shoppers can compare specialist infrared-sauna sources.</p></div>'
+        page=head(f'{r.get("name")} — Infrared Sauna Retailer Guide',f'Retailer context and indexed infrared sauna models for {r.get("name")}.',f'/retailers/{slug}/')+NAV+f'''<main class="subpage"><div class="page-kicker">{label}</div><h1>{html.escape(r.get('name',slug))}</h1>{intro}{details}<div class="retailer-linkbox"><span>ONE OUTBOUND SHOPPING LINK</span><p>Current availability and purchase information are maintained by the retailer.</p>{outbound}</div><h2 class="retailer-model-heading">Models indexed from this retailer</h2><div class="rank-list">{model_list}</div>{empty_state}</main>'''+FOOT+'</body></html>'
         d=rroot/slug; d.mkdir(parents=True,exist_ok=True); (d/'index.html').write_text(page)
+        directory_cards.append(f'''<article class="retailer-card{' featured' if is_featured else ''}"><div class="retailer-card-top"><span>{'RECOMMENDED' if is_featured else 'SPECIALIST RETAILER'}</span><b>{len(items)} indexed model{'s' if len(items)!=1 else ''}</b></div><h2>{html.escape(r.get('name',slug))}</h2><p>{html.escape(r.get('description',''))}</p><a class="text-link" href="/retailers/{slug}/">View retailer guide →</a></article>''')
+    directory=head('Infrared Sauna Retailer Directory','Compare the specialist infrared sauna retailers referenced by the Best Home Infrared Sauna model index.','/retailers/')+NAV+f'''<main class="subpage retailer-directory"><div class="page-kicker">BUYING SOURCES / RETAILER INDEX</div><h1>Infrared sauna retailers</h1><p class="lede">Each model points to one recommended retailer page. When InHouse Wellness carries a brand, it remains the recommendation; other retailers broaden the index with non-overlapping brands and product formats.</p><div class="retailer-policy"><strong>How recommendations work</strong><p>Retailer placement does not change specification or fit scores. Shopping links appear once on each retailer guide rather than on every model page.</p></div><div class="retailer-grid">{''.join(directory_cards)}</div></main>'''+FOOT+'</body></html>'
+    (rroot/'index.html').write_text(directory)
 
 def render_models(data):
     mroot=ROOT/'models'; mroot.mkdir(exist_ok=True)
@@ -277,7 +303,8 @@ def render_models(data):
         grid=''.join(f'<div><dt>{html.escape(k)}</dt><dd>{html.escape(str(v))}</dd></div>' for k,v in specs)
         img=(f'<img src="{html.escape(s.get("image",""))}" alt="{html.escape(str(s.get("brand")))} {html.escape(str(s.get("model")))} infrared sauna" loading="lazy" referrerpolicy="no-referrer">' if s.get('image') else '<div class="photo-placeholder"><span>PRODUCT PHOTO</span><b>Image refreshes from the product source during the catalog update.</b></div>')
         retailer=RETAILERS.get(s.get('retailer_slug'),{'name':s.get('source','Retailer')})
-        page=head(f"{s.get('brand')} {s.get('model')} Specs & Home Fit",f"Home infrared sauna specifications and electrical fit for {s.get('brand')} {s.get('model')}.",f"/models/{s['slug']}/")+NAV+f'''<main class="model-page"><div class="model-title"><div><div class="page-kicker">INFRARED / {html.escape(str(s.get('brand','')).upper())}</div><h1>{html.escape(str(s.get('model') or s.get('title')))}</h1><p>{html.escape(str(s.get('title','')))}</p></div><div class="price-tag"><span>Observed price</span><strong>{money(s.get('price'))}</strong><small>checked {s.get('last_checked')}</small></div></div><section class="visual-spec-board"><figure class="product-photo">{img}<figcaption>Product image from the current source feed.</figcaption></figure><div class="dimension-board compact"><div class="cabinet large"><span>{val(s.get('width'),'″')} W</span><i></i><span>{val(s.get('height'),'″')} H</span></div><div><h2>Home-fit envelope</h2><p>Published exterior footprint: <b>{val(s.get('width'),'″')} × {val(s.get('depth'),'″')}</b>. Electrical: <b>{val(s.get('voltage'),'V')} / {val(s.get('amps'),'A')}</b>.</p><a class="button" href="/retailers/{html.escape(s.get('retailer_slug','inhouse-wellness'))}/">Where to Buy This Sauna</a><p class="retailer-note">Retailer: {html.escape(str(retailer.get('name',s.get('source',''))))}. The outbound shopping link is on the retailer page, not repeated here.</p></div></div></section><dl class="spec-grid">{grid}</dl><section class="prose"><h2>Source notes</h2><p>Specifications are normalized from current manufacturer/retailer product information by the automated updater. Missing values remain undocumented rather than estimated. EMF language is reported as a source claim, not an independent certification.</p><p>The source URL is retained in the downloadable dataset for auditability; this model page does not create an additional outbound commerce link.</p></section></main>'''+FOOT+'</body></html>'
+        brand_sku=clean(f"{s.get('brand','')} {s.get('sku') or s.get('model','')}")
+        page=head(f"{s.get('brand')} {s.get('model')} Specs & Home Fit",f"Home infrared sauna specifications and electrical fit for {s.get('brand')} {s.get('model')}.",f"/models/{s['slug']}/")+NAV+f'''<main class="model-page"><div class="model-title"><div><div class="page-kicker">INFRARED / {html.escape(str(s.get('brand','')).upper())}</div><h1>{html.escape(str(s.get('model') or s.get('title')))}</h1><p>{html.escape(str(s.get('title','')))}</p></div><div class="price-tag"><span>Observed price</span><strong>{money(s.get('price'))}</strong><small>checked {s.get('last_checked')}</small></div></div><section class="visual-spec-board"><figure class="product-photo">{img}<figcaption>Product image from the current source feed.</figcaption></figure><div class="dimension-board compact"><div class="cabinet large"><span>{val(s.get('width'),'″')} W</span><i></i><span>{val(s.get('height'),'″')} H</span></div><div><h2>Home-fit envelope</h2><p>Published exterior footprint: <b>{val(s.get('width'),'″')} × {val(s.get('depth'),'″')}</b>. Electrical: <b>{val(s.get('voltage'),'V')} / {val(s.get('amps'),'A')}</b>.</p><a class="button" href="/retailers/{html.escape(s.get('retailer_slug','inhouse-wellness'))}/">Where to Buy This Sauna</a><p class="retailer-note">See recommended retailer chosen for having the best price on {html.escape(brand_sku)}.</p></div></div></section><dl class="spec-grid">{grid}</dl><section class="prose"><h2>Source notes</h2><p>Specifications are normalized from current manufacturer/retailer product information by the automated updater. Missing values remain undocumented rather than estimated. EMF language is reported as a source claim, not an independent certification.</p><p>The source URL is retained in the downloadable dataset for auditability; this model page does not create an additional outbound commerce link.</p></section></main>'''+FOOT+'</body></html>'
         d=mroot/s['slug']; d.mkdir(parents=True,exist_ok=True); (d/'index.html').write_text(page)
 
 def render_support(data):
@@ -302,9 +329,10 @@ def render_support(data):
     (ROOT/'404.html').write_text(head('Page not found','Page not found.','/')+NAV+"<main class='subpage'><h1>404</h1><p>This specification page does not exist.</p><a class='button' href='/'>Back to the lab</a></main>"+FOOT+'</body></html>')
 
 def render(data):
+    load_retailers(); data=apply_retailer_priority(data)
     render_home(data); render_models(data); render_retailers(data); render_support(data)
     today=datetime.now(timezone.utc).date().isoformat()
-    urls=['/','/emf/','/electrical/','/best/120v/','/best/small-spaces/','/best/full-spectrum/','/best/low-emf/','/methodology/']+[f"/models/{s['slug']}/" for s in data]+[f"/retailers/{x}/" for x in sorted(set(s.get('retailer_slug','inhouse-wellness') for s in data))]
+    urls=['/','/emf/','/electrical/','/best/120v/','/best/small-spaces/','/best/full-spectrum/','/best/low-emf/','/methodology/','/retailers/']+[f"/models/{s['slug']}/" for s in data]+[f"/retailers/{x}/" for x in sorted(RETAILERS)]
     (ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'<url><loc>{DOMAIN}{u}</loc><lastmod>{today}</lastmod></url>\n' for u in urls)+'</urlset>')
 
 if __name__=='__main__':

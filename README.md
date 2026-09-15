@@ -6,8 +6,10 @@ Static GitHub Pages site for comparing **infrared-only home saunas** by physical
 
 - Individual model pages no longer link directly to ecommerce sites.
 - Every model's **Where to Buy This Sauna** button stays internal and points to a retailer context page.
+- `/retailers/` is the retailer directory linked from the main navigation and footer.
 - `/retailers/inhouse-wellness/` contains the site's **single outbound link to InHouse Wellness**.
 - Other retailer pages also contain a single outbound link per retailer.
+- Models from any brand carried by InHouse Wellness are automatically assigned to its retailer page before rendering.
 - Model pages now show the actual product photo when the source feed/page exposes one, next to the dimension drawing.
 - Additional infrared-only models from curated retailers are included below the featured InHouse catalog.
 - Brands from additional retailers are deliberately sorted after all InHouse-sourced brands in the homepage dropdown.
@@ -20,6 +22,10 @@ Configured in `data/external_models.json` and refreshable by the weekly updater:
 - Health Mate — Enrich 2, Enrich 3
 - HigherDOSE — Full Spectrum Infrared Sauna, 2-person variant
 - Sunlighten — mPulse Believe
+- JNH Lifestyles — Joyous+ 2 Person
+- SaunaSpace — FireLight Full-Spectrum Sauna
+- Sun Home Saunas — Solstice 1-Person
+- Radiant Health Saunas — Pause 2-Person
 
 Edit `data/external_models.json` to add/remove external models or retailers. A retailer receives one internal context page and one outbound link.
 
